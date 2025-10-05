@@ -20,8 +20,6 @@ if not SECRET_KEY:
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
-# This tells FastAPI how to find the token in requests
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # --- Pydantic Schemas (Data Models) ---
@@ -49,7 +47,6 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
 
-    # Passlib expects the password as a string, it handles the encoding.
     hashed_password = pwd_context.hash(payload.password)
     user = User(username=payload.username, password=hashed_password)
     db.add(user)
@@ -104,4 +101,3 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     if user is None:
         raise credentials_exception
     return user
-

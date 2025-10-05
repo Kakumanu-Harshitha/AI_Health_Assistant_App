@@ -4,11 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- CORRECTED MODEL NAME ---
-# Updated to a currently supported and recommended model from Groq.
 LLM_MODEL = "llama-3.1-8b-instant"
-
-# Initialize client
 client = None
 if os.getenv("GROQ_API_KEY"):
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -49,4 +45,3 @@ def get_llm_response(prompt: str, conversation_history: list = None) -> str:
     except Exception as e:
         print(f"❌ ERROR: Groq API call failed. Error: {e}")
         return "I'm sorry, I encountered an error while processing your request."
-

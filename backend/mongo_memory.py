@@ -4,16 +4,13 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 
 load_dotenv()
-# Assuming you have loaded environment variables (e.g., using load_dotenv())
-username = "harshitha2006"
-password = "Kharshitha123"
+
+username = os.getenv("MONGO_USERNAME")
+password = os.getenv("MONGO_PASSWORD")
 uri = f"mongodb+srv://{username}:{password}@cluster0.i79tx42.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 client = MongoClient(uri)
 db = client["Health_Assistant"]
 memory_collection = db["Health_Memory"]
-
-
-
 
 def store_message(user_id: str, role: str, content: str):
     """Stores a message in the user's conversation history."""
@@ -25,13 +22,10 @@ def store_message(user_id: str, role: str, content: str):
         "timestamp": datetime.now(timezone.utc)
     })
 
-def get_user_memory(user_id: str, limit: int = 20):
+def get_user_memory(user_id: str, limit: int = 10):
     """Retrieves the last 'limit' messages for the LLM, in chronological order."""
     if memory_collection is None: return []
     
-    # --- THE FIX ---
-    # This projection now *only* fetches the 'role' and 'content' fields.
-    # This prevents the 'datetime is not JSON serializable' error that was crashing the backend.
     messages = memory_collection.find(
         {"user_id": user_id},
         {"_id": 0, "role": 1, "content": 1} 
@@ -45,8 +39,7 @@ def get_full_history_for_dashboard(user_id: str, limit: int = 100):
     
     messages = memory_collection.find(
         {"user_id": user_id},
-        {"_id": 0} # Get all fields except the internal ID for the dashboard
+        {"_id": 0} 
     ).sort("timestamp", -1).limit(limit)
     
     return list(messages)
-

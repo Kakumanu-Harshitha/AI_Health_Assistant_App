@@ -185,4 +185,3 @@ if st.session_state.get("token"):
         st.rerun()
 else:
     render_login_page()
-

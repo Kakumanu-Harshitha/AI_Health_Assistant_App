@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
+from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException
 from pydantic import BaseModel
-import base64
 from io import BytesIO
 
 from . import mongo_memory, llm_service, speech_service
@@ -29,8 +28,7 @@ async def handle_image_query(query: str = Form(...), file: UploadFile = File(...
     user_id_str = str(current_user.id)
     history = mongo_memory.get_user_memory(user_id_str)
 
-    # The prompt already contains all text. We just add a note about the image.
-    full_prompt = f"The user has provided the following text: '{query}'. They have also uploaded an image for additional context. Please analyze the text and refer to the fact an image was provided in your response."
+    full_prompt = f"The user has provided the following text: '{query}'. They also uploaded an image for context."
     
     response_text = llm_service.get_llm_response(full_prompt, history)
     
@@ -42,8 +40,8 @@ async def handle_image_query(query: str = Form(...), file: UploadFile = File(...
 @router.post("/voice")
 async def handle_voice_query(
     file: UploadFile = File(...), 
-    text_context: str = Form(""), # Optional text from the form
-    image_context: bool = Form(False), # Flag to indicate an image was present
+    text_context: str = Form(""), 
+    image_context: bool = Form(False), 
     current_user: User = Depends(get_current_user)
 ):
     user_id_str = str(current_user.id)
@@ -55,31 +53,22 @@ async def handle_voice_query(
     if "[stt_error]" in transcribed_text:
         raise HTTPException(status_code=500, detail=f"Speech-to-text failed: {transcribed_text}")
     
-    # --- COMBINE ALL INPUTS INTO ONE PROMPT ---
-    prompt_parts = [f"The user said: '{transcribed_text}'."]
+    # Combine all inputs
+    prompt_parts = [f"The user said: '{transcribed_text}'."]    
     if text_context:
         prompt_parts.append(f"They also wrote: '{text_context}'.")
     if image_context:
         prompt_parts.append("They also uploaded an image for context.")
     
     full_prompt = " ".join(prompt_parts)
-        
     history = mongo_memory.get_user_memory(user_id_str)
     response_text = llm_service.get_llm_response(full_prompt, history)
     
     mongo_memory.store_message(user_id_str, 'user', full_prompt)
     mongo_memory.store_message(user_id_str, 'assistant', response_text)
     
-    audio_bytes = speech_service.text_to_speech(response_text)
-    if not audio_bytes:
-        raise HTTPException(status_code=500, detail="Text-to-speech conversion failed.")
-        
-    audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
-    
+    # Return only text, no audio
     return {
         "transcribed_text": transcribed_text,
-        "text_response": response_text,
-        "audio_response": audio_base64
+        "text_response": response_text
     }
-
-
