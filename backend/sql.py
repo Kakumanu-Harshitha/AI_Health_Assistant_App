@@ -6,8 +6,6 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("FATAL ERROR: DATABASE_URL must be set in the .env file.")
 
 Base = declarative_base()
 engine = create_engine(DATABASE_URL, echo=False)
@@ -25,9 +23,9 @@ def create_db_and_tables():
     """Create database tables if they don’t exist."""
     try:
         Base.metadata.create_all(bind=engine)
-        print("SQL tables created successfully (if they didn't exist).")
+        print("✅ SQL tables created successfully (if they didn't exist).")
     except Exception as e:
-        print(f"ERROR: Could not create SQL tables. Error: {e}")
+        print(f"❌ ERROR: Could not create SQL tables. Error: {e}")
 
 # --- Dependency for FastAPI ---
 def get_db():
@@ -37,4 +35,3 @@ def get_db():
         yield db
     finally:
         db.close()
-

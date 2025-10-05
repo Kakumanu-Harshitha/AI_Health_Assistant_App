@@ -4,10 +4,7 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 
 load_dotenv()
-
-username = os.getenv("MONGO_USERNAME")
-password = os.getenv("MONGO_PASSWORD")
-uri = f"mongodb+srv://{username}:{password}@cluster0.i79tx42.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+uri=os.getenv("MONGO_URI")
 client = MongoClient(uri)
 db = client["Health_Assistant"]
 memory_collection = db["Health_Memory"]
