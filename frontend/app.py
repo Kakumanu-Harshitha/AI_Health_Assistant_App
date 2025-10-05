@@ -6,7 +6,7 @@ from st_audiorec import st_audiorec
 
 # --- Configuration ---
 st.set_page_config(page_title="AI Health Assistant", layout="wide")
-BACKEND_URL = "http://127.0.0.1:8000"
+BACKEND_URL = "https://ai-health-assistant-app.onrender.com/"
 
 # --- State Management Initialization ---
 if "token" not in st.session_state:
