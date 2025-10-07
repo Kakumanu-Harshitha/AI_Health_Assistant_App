@@ -1,7 +1,7 @@
 import os
 from groq import Groq
 from dotenv import load_dotenv
-from fastapi import UploadFile # It's good practice to add type hints
+from fastapi import UploadFile
 
 # Load environment variables from .env file
 load_dotenv()
@@ -25,17 +25,16 @@ def speech_to_text(audio_file: UploadFile) -> str:
         return "[stt_error] Speech service is not configured due to missing API key."
 
     try:
-        # --- THE FIX IS HERE ---
-        # Create a tuple containing the filename and the file-like object (.file)
-        # This is the format the Groq SDK expects.
+        # Pass the file as a (filename, file_object) tuple, which the client expects.
         file_tuple = (audio_file.filename, audio_file.file)
 
         transcription = groq_client.audio.transcriptions.create(
             model=STT_MODEL,
-            file=file_tuple,  # Pass the correctly formatted tuple to the API
+            file=file_tuple,
             response_format="verbose_json"
         )
         return transcription.text
     except Exception as e:
         print(f"❌ ERROR: Groq STT API call failed. Error: {e}")
         return f"[stt_error] {e}"
+

@@ -67,15 +67,16 @@ def render_chat_page():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # --- UNIFIED INPUT FORM ---
     st.markdown("---")
     st.subheader("Compose Your Query")
     with st.form("query_form", clear_on_submit=True):
-        st.write("You can record voice, type text, and upload an image.")
-        
+        st.write("You can record voice, type text, and upload an image. The AI will consider all inputs together.")
+
         recorded_audio_bytes = st_audiorec()
         text_input = st.text_area("Type additional symptoms or questions here:")
         uploaded_image = st.file_uploader("Optionally, upload an image of your concern:")
-        
+
         submitted = st.form_submit_button("Submit Query")
 
         if submitted:
@@ -84,53 +85,49 @@ def render_chat_page():
                 st.stop()
 
             try:
-            
-                if recorded_audio_bytes:
-                    user_summary_placeholder = "🎤 Sending voice and text query..."
-                    st.session_state.messages.append({"role": "user", "content": user_summary_placeholder})
-                    
-                    with st.spinner("Processing your query..."):
-                        data = {"text_context": text_input}
-                        files = {'file': ("recorded_audio.wav", BytesIO(recorded_audio_bytes), "audio/wav")}
-                        
-                        r = requests.post(f"{BACKEND_URL}query/voice", data=data, files=files, headers=headers)
-                        r.raise_for_status()
-                        response_data = r.json()
-                        
-                        user_summary = [f"🎤: {response_data['transcribed_text']}"]
-                        if text_input: user_summary.append(f"📝: {text_input}")
-                
-                        st.session_state.messages[-1] = {"role": "user", "content": "\n\n".join(user_summary)}
-                        st.session_state.messages.append({"role": "assistant", "content": response_data['text_response']})
-                elif uploaded_image:
-                    prompt = text_input if text_input else "User uploaded an image for analysis."
-                    st.session_state.messages.append({"role": "user", "content": f"🖼️: Image uploaded\n\n📝: {prompt}"})
+                # --- UNIFIED SUBMISSION LOGIC ---
+                with st.spinner("Processing your multimodal query..."):
+                    # Prepare data and files for the multipart request.
+                    files_to_send = []
+                    data_to_send = {'text_query': text_input}
 
-                    with st.spinner("Analyzing image..."):
-                        files = {'file': (uploaded_image.name, uploaded_image.getvalue(), uploaded_image.type)}
-                        r = requests.post(f"{BACKEND_URL}query/image", data={'query': prompt}, files=files, headers=headers)
-                        r.raise_for_status()
-                        response_text = r.json().get('response')
-                        st.session_state.messages.append({"role": "assistant", "content": response_text})
+                    if recorded_audio_bytes:
+                        files_to_send.append(
+                            ('audio_file', ('recorded_audio.wav', BytesIO(recorded_audio_bytes), 'audio/wav'))
+                        )
+                    if uploaded_image:
+                        files_to_send.append(
+                            ('image_file', (uploaded_image.name, uploaded_image.getvalue(), uploaded_image.type))
+                        )
 
-                elif text_input:
-                    st.session_state.messages.append({"role": "user", "content": text_input})
-                    
-                    with st.spinner("Thinking..."):
-                        r = requests.post(f"{BACKEND_URL}query/text", json={"text": text_input}, headers=headers)
-                        r.raise_for_status()
-                        response_text = r.json().get('response')
-                        st.session_state.messages.append({"role": "assistant", "content": response_text})
-                
-                st.rerun()
+                    # Send all data to the new unified endpoint in a single request.
+                    r = requests.post(
+                        f"{BACKEND_URL}query/multimodal",
+                        data=data_to_send,
+                        files=files_to_send,
+                        headers=headers
+                    )
+                    r.raise_for_status()
+                    response_data = r.json()
+
+                    # Build a user-friendly summary of what was sent based on the response.
+                    user_summary = []
+                    if response_data.get("transcribed_text"):
+                        user_summary.append(f"🎤 **You said:** *{response_data['transcribed_text']}*")
+                    if text_input:
+                        user_summary.append(f"📝 **You wrote:** *{text_input}*")
+                    if response_data.get("image_caption"):
+                        user_summary.append(f"🖼️ **Image analysis:** *{response_data['image_caption']}*")
+
+                    # Display the results in the chat.
+                    st.session_state.messages.append({"role": "user", "content": "\n\n".join(user_summary)})
+                    st.session_state.messages.append({"role": "assistant", "content": response_data['text_response']})
+                    st.rerun()
 
             except requests.exceptions.HTTPError as e:
-                st.session_state.messages.append({"role": "assistant", "content": "Sorry, an error occurred while processing your request."})
                 handle_api_error(e, "query submission")
-                st.rerun()
             except Exception as e:
                 st.error(f"An unexpected client-side error occurred: {e}")
-                st.rerun()
 
 def render_dashboard_page():
     st.title("Your Health Dashboard")
@@ -139,7 +136,7 @@ def render_dashboard_page():
         r = requests.get(f"{BACKEND_URL}dashboard/history", headers=headers)
         r.raise_for_status()
         history = r.json()
-        if not history: 
+        if not history:
             st.info("No conversation history yet.")
         for item in reversed(history):
             role = "You" if item['role'] == 'user' else "Assistant"
