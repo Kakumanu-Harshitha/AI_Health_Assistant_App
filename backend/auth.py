@@ -6,7 +6,6 @@ from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 import os
-
 from .sql import get_db, User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -21,10 +20,9 @@ if not SECRET_KEY:
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-# --- Pydantic Schemas ---
+# --- Pydantic Schemas (Data Models) ---
 class TokenOut(BaseModel):
     access_token: str
     token_type: str
@@ -35,7 +33,7 @@ class UserCreate(BaseModel):
     username: str
     password: str
 
-# --- Helper: Create JWT Token ---
+# --- Helper Function to Create JWT Tokens ---
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -45,12 +43,9 @@ def create_access_token(data: dict):
 # --- Signup Endpoint ---
 @router.post("/signup", response_model=TokenOut)
 def signup(payload: UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.username == payload.username).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists"
-        )
+    """Handles new user registration."""
+    if db.query(User).filter(User.username == payload.username).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
 
     hashed_password = pwd_context.hash(payload.password)
     user = User(username=payload.username, password=hashed_password)
@@ -69,6 +64,7 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
 # --- Login Endpoint ---
 @router.post("/login", response_model=TokenOut)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """Handles user login and returns a JWT token."""
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not pwd_context.verify(form_data.password, user.password):
         raise HTTPException(
@@ -85,8 +81,9 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "username": user.username
     }
 
-# --- Dependency: Get Current User ---
+# --- Dependency to Get Current User from Token ---
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """Validates the token and returns the corresponding user from the database."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -95,12 +92,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        if not username:
+        if username is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
     user = db.query(User).filter(User.username == username).first()
-    if not user:
+    if user is None:
         raise credentials_exception
     return user

@@ -1,10 +1,11 @@
+
 import os
 from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
 
-LLM_MODEL = "llama-3.1-8b-instant"
+LLM_MODEL = "gemma2-9b-it"
 client = None
 if os.getenv("GROQ_API_KEY"):
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
