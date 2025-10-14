@@ -41,6 +41,7 @@ Deployment: Configured for cloud platforms like Railway or Render.
 
 # 📁 Project Structure
 Ai_health_assistant/
+
 ├── backend/
 
 │   ├── auth.py             # Handles user signup, login, and JWT tokens
@@ -60,6 +61,7 @@ Ai_health_assistant/
 │   └── sql.py              # Manages PostgreSQL connection and user table
 
 │
+
 ├── frontend/
 
 │   └── app.py              # The complete Streamlit frontend application
