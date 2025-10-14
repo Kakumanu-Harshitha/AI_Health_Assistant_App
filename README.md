@@ -42,19 +42,30 @@ Deployment: Configured for cloud platforms like Railway or Render.
 # 📁 Project Structure
 Ai_health_assistant/
 ├── backend/
+
 │   ├── auth.py             # Handles user signup, login, and JWT tokens
+
 │   ├── dashboard_service.py # Powers the user dashboard
+
 │   ├── llm_service.py      # The "brain" - communicates with the Groq LLM
+
 │   ├── main.py             # Main FastAPI application entrypoint
+
 │   ├── mongo_memory.py     # Manages conversation history in MongoDB
+
 │   ├── query_service.py    # Handles all user queries (text, voice, image)
-│   ├── speech_service.py   # Handles STT and TTS
+
+│   ├── speech_service.py   # Handles STT 
+
 │   └── sql.py              # Manages PostgreSQL connection and user table
+
 │
 ├── frontend/
+
 │   └── app.py              # The complete Streamlit frontend application
 │
 ├── .env                    # Secret keys and configuration (MUST BE CREATED)
+
 └── requirements.txt        # Python package dependencies
 
 # Owner
