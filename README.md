@@ -64,8 +64,10 @@ Ai_health_assistant/
 
 ├── frontend/
 
-│   └── app.py              # The complete Streamlit frontend application
+│   └── app.py # The complete Streamlit frontend application
+
 │
+
 ├── .env                    # Secret keys and configuration (MUST BE CREATED)
 
 └── requirements.txt        # Python package dependencies
